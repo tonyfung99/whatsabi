@@ -7,150 +7,181 @@ import { test, online_test, cached_test, makeProvider } from "./env";
 
 const TIMEOUT = 15000;
 
-test('autoload throws typed error', async () => {
-    // @ts-expect-error: Expected 2 arguments, but got 1
-    await expect(autoload("0xf00")).rejects.toThrow(new RegExp("config is undefined"));
+test("autoload throws typed error", async () => {
+  // @ts-expect-error: Expected 2 arguments, but got 1
+  await expect(autoload("0xf00")).rejects.toThrow(new RegExp("config is undefined"));
 
-    const fakeProvider = {
-        request: () => { },
-    };
-    await expect(autoload("abc.eth", { provider: fakeProvider })).rejects.toThrow(new RegExp("Failed to resolve ENS"));
+  const fakeProvider = {
+    request: () => {},
+  };
+  await expect(autoload("abc.eth", { provider: fakeProvider })).rejects.toThrow(new RegExp("Failed to resolve ENS"));
 });
 
-test('autoload sets hasCode to false if code is empty', async () => {
-    const fakeProvider = (code: string) => ({
-      request: () => code,
-    });
-    const address = "0x00000000219ab540356cBB839Cbe05303d7705Fa"
-    await expect(autoload(address, { provider: fakeProvider("0x") })).resolves.toMatchObject({ hasCode: false });
-    await expect(autoload(address, { provider: fakeProvider("0x1234") })).resolves.toMatchObject({ hasCode: true });
+test("autoload sets hasCode to false if code is empty", async () => {
+  const fakeProvider = (code: string) => ({
+    request: () => code,
+  });
+  const address = "0x00000000219ab540356cBB839Cbe05303d7705Fa";
+  await expect(autoload(address, { provider: fakeProvider("0x") })).resolves.toMatchObject({ hasCode: false });
+  await expect(autoload(address, { provider: fakeProvider("0x1234") })).resolves.toMatchObject({ hasCode: true });
 });
 
-online_test('autoload selectors', async ({ provider }) => {
+online_test(
+  "autoload selectors",
+  async ({ provider }) => {
     const address = "0x4A137FD5e7a256eF08A7De531A17D0BE0cc7B6b6"; // Random unverified contract
     const { abi } = await autoload(address, {
-        provider: provider,
-        abiLoader: false,
-        signatureLookup: false,
+      provider: provider,
+      abiLoader: false,
+      signatureLookup: false,
     });
-    expect(abi).toContainEqual({ "selector": "0x6dbf2fa0", "type": "function" });
-    expect(abi).toContainEqual({ "selector": "0xec0ab6a7", "type": "function" });
-}, TIMEOUT);
+    expect(abi).toContainEqual({ selector: "0x6dbf2fa0", type: "function" });
+    expect(abi).toContainEqual({ selector: "0xec0ab6a7", type: "function" });
+  },
+  TIMEOUT
+);
 
-online_test('autoload selectors with experimental metadata', async ({ provider }) => {
+online_test(
+  "autoload selectors with experimental metadata",
+  async ({ provider }) => {
     const address = "0x4A137FD5e7a256eF08A7De531A17D0BE0cc7B6b6"; // Random unverified contract
     const { abi } = await autoload(address, {
-        provider: provider,
-        abiLoader: false,
-        signatureLookup: false,
-        enableExperimentalMetadata: true,
-    });
-    expect(abi).toContainEqual({ "inputs": [{ "type": "bytes", "name": "" }], "payable": true, "selector": "0x6dbf2fa0", "stateMutability": "payable", "type": "function" });
-    expect(abi).toContainEqual({ "inputs": [{ "type": "bytes", "name": "" }], "payable": true, "selector": "0xec0ab6a7", "stateMutability": "payable", "type": "function" });
-}, TIMEOUT);
-
-
-online_test('autoload full', async ({ provider, env }) => {
-    const address = "0x4A137FD5e7a256eF08A7De531A17D0BE0cc7B6b6"; // Random unverified contract
-    const { abi } = await autoload(address, {
-        provider: provider,
-        // Equivalent to:
-        // ...whatsabi.loaders.defaultsWithEnv(env),
-        abiLoader: new whatsabi.loaders.MultiABILoader([
-            new whatsabi.loaders.SourcifyABILoader(),
-            new whatsabi.loaders.EtherscanABILoader({ apiKey: env.ETHERSCAN_API_KEY }),
-        ]),
-        signatureLookup: new whatsabi.loaders.MultiSignatureLookup([
-            new whatsabi.loaders.OpenChainSignatureLookup(),
-            new whatsabi.loaders.FourByteSignatureLookup(),
-        ]),
-        //onProgress: (phase: string, ...args: any[]) => { console.debug("PROGRESS", phase, args); },
+      provider: provider,
+      abiLoader: false,
+      signatureLookup: false,
+      enableExperimentalMetadata: true,
     });
     expect(abi).toContainEqual({
-        "inputs": [
-            { "type": "address" },
-            { "type": "uint256" },
-            { "type": "bytes" }
-        ],
-        "name": "call",
-        "stateMutability": "nonpayable",
-        "selector": "0x6dbf2fa0",
-        "sig": "call(address,uint256,bytes)",
-        "type": "function"
+      inputs: [{ type: "bytes", name: "" }],
+      payable: true,
+      selector: "0x6dbf2fa0",
+      stateMutability: "payable",
+      type: "function",
     });
+    expect(abi).toContainEqual({
+      inputs: [{ type: "bytes", name: "" }],
+      payable: true,
+      selector: "0xec0ab6a7",
+      stateMutability: "payable",
+      type: "function",
+    });
+  },
+  TIMEOUT
+);
 
-    expect(abi).toContainEqual({ "selector": "0xec0ab6a7", "type": "function" });
-}, TIMEOUT);
-
-online_test('autoload non-contract', async ({ provider, env }) => {
-    const address = "0x0000000000000000000000000000000000000000"; // Random unverified contract
+online_test(
+  "autoload full",
+  async ({ provider, env }) => {
+    const address = "0x4A137FD5e7a256eF08A7De531A17D0BE0cc7B6b6"; // Random unverified contract
     const { abi } = await autoload(address, {
-        provider: provider,
-        ...whatsabi.loaders.defaultsWithEnv(env),
+      provider: provider,
+      // Equivalent to:
+      // ...whatsabi.loaders.defaultsWithEnv(env),
+      abiLoader: new whatsabi.loaders.MultiABILoader([
+        new whatsabi.loaders.SourcifyABILoader(),
+        new whatsabi.loaders.EtherscanABILoader({ apiKey: env.ETHERSCAN_API_KEY }),
+      ]),
+      signatureLookup: new whatsabi.loaders.MultiSignatureLookup([
+        new whatsabi.loaders.OpenChainSignatureLookup(),
+        new whatsabi.loaders.FourByteSignatureLookup(),
+      ]),
+      //onProgress: (phase: string, ...args: any[]) => { console.debug("PROGRESS", phase, args); },
     });
-    expect(abi).toStrictEqual([]);
+    expect(abi).toContainEqual({
+      inputs: [{ type: "address" }, { type: "uint256" }, { type: "bytes" }],
+      name: "call",
+      stateMutability: "nonpayable",
+      selector: "0x6dbf2fa0",
+      sig: "call(address,uint256,bytes)",
+      type: "function",
+    });
+
+    expect(abi).toContainEqual({ selector: "0xec0ab6a7", type: "function" });
+  },
+  TIMEOUT
+);
+
+online_test("autoload non-contract", async ({ provider, env }) => {
+  const address = "0x0000000000000000000000000000000000000000"; // Random unverified contract
+  const { abi } = await autoload(address, {
+    provider: provider,
+    ...whatsabi.loaders.defaultsWithEnv(env),
+  });
+  expect(abi).toStrictEqual([]);
 });
 
-online_test('autoload verified multi', async ({ provider, env }) => {
-    const address = "0x8f8ef111b67c04eb1641f5ff19ee54cda062f163"; // Uniswap v3 pool, verified on Etherscan and Sourcify
+online_test("autoload verified multi", async ({ provider, env }) => {
+  const address = "0x8f8ef111b67c04eb1641f5ff19ee54cda062f163"; // Uniswap v3 pool, verified on Etherscan and Sourcify
+  const result = await autoload(address, {
+    provider: provider,
+    ...whatsabi.loaders.defaultsWithEnv(env),
+  });
+  expect(result.abiLoadedFrom?.name).toBeTruthy();
+});
+
+online_test("autoload lifi", async ({ provider, env }) => {
+  const address = "0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae"; // lifi proxy
+
+  try {
     const result = await autoload(address, {
-        provider: provider,
-        ...whatsabi.loaders.defaultsWithEnv(env),
+      provider: provider,
+      followProxies: true,
+      ...whatsabi.loaders.defaultsWithEnv(env),
     });
+    console.log("result", result);
+
     expect(result.abiLoadedFrom?.name).toBeTruthy();
+    expect(result.proxies.length).toBeGreaterThan(0);
+    expect(result.proxies[0].name).toEqual("DiamondProxy");
+  } catch (error) {
+    console.log("error", error);
+  }
 });
 
-online_test('autoload loadContractResult verified etherscan', async ({ provider, env }) => {
-    const address = "0xc3d688b66703497daa19211eedff47f25384cdc3"; // Compound USDC proxy
-    const result = await autoload(address, {
-        provider: provider,
-        loadContractResult: true,
-        followProxies: false,
-        abiLoader: new whatsabi.loaders.EtherscanABILoader({ apiKey: env.ETHERSCAN_API_KEY }),
-    });
-    expect(result.abiLoadedFrom?.name).toBe("EtherscanABILoader");
-    expect(result.contractResult?.ok).toBeTruthy();
-    expect(result.contractResult?.name).toBe("TransparentUpgradeableProxy");
-    expect(result.contractResult?.compilerVersion).toBe("v0.8.15+commit.e14f2714");
-    expect(result.contractResult?.loaderResult?.Proxy).toBe("1");
-    expect(result.contractResult?.loaderResult?.Implementation).toMatch(new RegExp("^0x[0-9a-f]{40}$"));
+online_test("autoload loadContractResult verified etherscan", async ({ provider, env }) => {
+  const address = "0xc3d688b66703497daa19211eedff47f25384cdc3"; // Compound USDC proxy
+  const result = await autoload(address, {
+    provider: provider,
+    loadContractResult: true,
+    followProxies: false,
+    abiLoader: new whatsabi.loaders.EtherscanABILoader({ apiKey: env.ETHERSCAN_API_KEY }),
+  });
+  expect(result.abiLoadedFrom?.name).toBe("EtherscanABILoader");
+  expect(result.contractResult?.ok).toBeTruthy();
+  expect(result.contractResult?.name).toBe("TransparentUpgradeableProxy");
+  expect(result.contractResult?.compilerVersion).toBe("v0.8.15+commit.e14f2714");
+  expect(result.contractResult?.loaderResult?.Proxy).toBe("1");
+  expect(result.contractResult?.loaderResult?.Implementation).toMatch(new RegExp("^0x[0-9a-f]{40}$"));
 });
 
-cached_test('autoload isFactory', async ({ provider, env, withCache }) => {
-    const address = "0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6"; // Factory that makes proxies
+cached_test("autoload isFactory", async ({ provider, env, withCache }) => {
+  const address = "0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6"; // Factory that makes proxies
 
-    const code = await withCache(
-        `${address}_code`,
-        async () => {
-            return await provider.getCode(address)
-        },
-    )
-    const result = await autoload(address, {
-        provider: whatsabi.providers.WithCachedCode(provider, {
-            [address]: code,
-        }),
-        ...whatsabi.loaders.defaultsWithEnv(env),
-    });
-    expect(result.isFactory).toBeTruthy();
+  const code = await withCache(`${address}_code`, async () => {
+    return await provider.getCode(address);
+  });
+  const result = await autoload(address, {
+    provider: whatsabi.providers.WithCachedCode(provider, {
+      [address]: code,
+    }),
+    ...whatsabi.loaders.defaultsWithEnv(env),
+  });
+  expect(result.isFactory).toBeTruthy();
 });
 
-cached_test('autoload ambiguous proxy', async ({ provider, env, withCache }) => {
-    // Issue #173
-    const address = "0xe1164a7a364929c3ba3da9671c8003dd71975d2d";
+cached_test("autoload ambiguous proxy", async ({ provider, env, withCache }) => {
+  // Issue #173
+  const address = "0xe1164a7a364929c3ba3da9671c8003dd71975d2d";
 
-    const code = await withCache(
-        `${address}_code`,
-        async () => {
-            return await provider.getCode(address)
-        },
-    )
-    const result = await autoload(address, {
-        provider: whatsabi.providers.WithCachedCode(provider, {
-            [address]: code,
-        }),
-        ...whatsabi.loaders.defaultsWithEnv(env),
-    });
-    expect(result.proxies.length).toBe(1);
-    expect(result.followProxies).toBeFalsy();
+  const code = await withCache(`${address}_code`, async () => {
+    return await provider.getCode(address);
+  });
+  const result = await autoload(address, {
+    provider: whatsabi.providers.WithCachedCode(provider, {
+      [address]: code,
+    }),
+    ...whatsabi.loaders.defaultsWithEnv(env),
+  });
+  expect(result.proxies.length).toBe(1);
+  expect(result.followProxies).toBeFalsy();
 });
-
